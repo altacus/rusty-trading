@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+mod buy_orders;
+pub use buy_orders::BuyOrders;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+mod fulfillment;
+pub use fulfillment::fulfill_orders;
+
+mod order;
+pub use order::Order;
+pub use order::OrderType;
+
+mod sell_orders;
+pub use sell_orders::SellOrders;
+
