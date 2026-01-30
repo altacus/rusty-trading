@@ -4,7 +4,7 @@ pub enum OrderType {
     Sell,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Order {
     pub order_type: OrderType,
     pub price: i32,

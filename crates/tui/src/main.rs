@@ -1,5 +1,5 @@
 use std::io;
-use trading_lib::{fulfill_orders, Order, OrderType, BuyOrders, SellOrders};
+use trading_lib::{BuyOrders, FulfillmentEngine, OrderBookEngine, SellOrders};
 
 fn main() {
     let mut buys: BuyOrders = BuyOrders::new();
@@ -7,9 +7,7 @@ fn main() {
     let mut is_valid_menu = false;
 
     loop {
-        let mut input2 = String::new();
         let menu_input = display_menu();
-        println!("    Menu entered: {}", menu_input);
 
         match menu_input.as_str() {
             "1" => is_valid_menu = true,
@@ -19,33 +17,9 @@ fn main() {
         }
 
         if is_valid_menu {
-            println!(" Enter an integer price: ");
-
-            io::stdin()
-                .read_line(&mut input2)
-                .expect("Failed to read line");
-
-            println!("     Price entered: {}", input2);
-            let price: i32 = input2
-                .trim()
-                .parse()
-                .expect("The input string was not a valid i32 number");
-
-
-            match menu_input.as_str() {
-                "1" => {
-                    let new_order = Order { order_type: OrderType::Buy, price };
-                    let _ = buys.push(new_order);
-                }
-                "2" => {
-                    let new_order = Order { order_type: OrderType::Sell, price };
-                    let _ = sells.push(new_order);
-                }
-                _ => (),
-            }
-
-            fulfill_orders(&mut buys, &mut sells);
-	    is_valid_menu = false;
+            let price: i32 = get_price_input();
+            fulfill_orders(&menu_input, price, &mut buys, &mut sells);
+            is_valid_menu = false;
         }
     }
 }
@@ -62,6 +36,39 @@ fn display_menu() -> String {
         .expect("Failed to read line");
 
     let value = input.trim();
-    println!("");
+    println!("    Menu entered: {}", value);
     value.to_string()
+}
+
+fn get_price_input() -> i32 {
+    let mut input = String::new();
+    println!(" Enter an integer price: ");
+
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+
+    println!("     Price entered: {}", input);
+    let price: i32 = input
+        .trim()
+        .parse()
+        .expect("The input string was not a valid i32 number");
+    price
+}
+
+fn fulfill_orders(menu_input: &str, price: i32, buys: &mut BuyOrders, sells: &mut SellOrders) {
+    match menu_input {
+        "1" => buys.add_order(price).expect("failed to add buy order"),
+        "2" => sells.add_order(price).expect("failed to add sell order"),
+        _ => (),
+    }
+
+    println!(" Fulfilling\n   Buys {:?}\n   Sells {:?}", buys, sells);
+    // Use the trait-based engine instead of the free function.
+    let mut engine = OrderBookEngine::new(buys, sells);
+    let trade = engine.fulfill();
+    if let Some(trade) = trade {
+        println!("Executed trade: {:?}", trade);
+    }
+    println!(" After fulfillment\n   Buys {:?}\n   Sells {:?}", buys, sells);
 }
