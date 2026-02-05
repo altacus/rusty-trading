@@ -1,4 +1,4 @@
-use crate::{OrderType, OrdersVec, Trade};
+use crate::{OrderType, Trade};
 
 /// Trait that abstracts a fulfillment engine. Implementors provide the logic
 /// to match and execute trades between buy and sell orders.
@@ -35,22 +35,16 @@ impl<'a> FulfillmentEngine for OrderBookEngine<'a> {
                 if self.trades.buy_orders.as_slice()[b_index].order_type == OrderType::Buy
                     && self.trades.sell_orders.as_slice()[s_index].order_type == OrderType::Sell
                 {
-                    let mut to_buy: OrdersVec = OrdersVec::new(OrderType::Buy);
-                    let mut to_sells: OrdersVec = OrdersVec::new(OrderType::Sell);
+                    let mut executed_trade = Trade::new();
 
-                    to_buy
+                    executed_trade.buy_orders
                         .push(self.trades.buy_orders.remove(b_index).unwrap())
                         .unwrap();
-                    to_sells
+                    executed_trade.sell_orders
                         .push(self.trades.sell_orders.remove(s_index).unwrap())
                         .unwrap();
 
-                    let trade = Trade {
-                        buy_orders: to_buy,
-                        sell_orders: to_sells,
-                    };
-
-                    return Some(trade);
+                    return Some(executed_trade);
                 }
             }
         }
