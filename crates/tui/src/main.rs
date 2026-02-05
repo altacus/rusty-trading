@@ -1,9 +1,10 @@
 use std::io;
-use trading_lib::{BuyOrders, FulfillmentEngine, OrderBookEngine, SellOrders};
+use trading_lib::{FulfillmentEngine, OrderBookEngine, Trade};
 
 fn main() {
-    let mut buys: BuyOrders = BuyOrders::new();
-    let mut sells: SellOrders = SellOrders::new();
+    let mut unexecuted_trades: Trade = Trade::new();
+    // let mut buys: BuyOrders = BuyOrders::new();
+    // let mut sells: SellOrders = SellOrders::new();
     let mut is_valid_menu = false;
 
     loop {
@@ -18,7 +19,7 @@ fn main() {
 
         if is_valid_menu {
             let price: i32 = get_price_input();
-            fulfill_orders(&menu_input, price, &mut buys, &mut sells);
+            fulfill_orders(&menu_input, price, &mut unexecuted_trades);
             is_valid_menu = false;
         }
     }
@@ -56,19 +57,25 @@ fn get_price_input() -> i32 {
     price
 }
 
-fn fulfill_orders(menu_input: &str, price: i32, buys: &mut BuyOrders, sells: &mut SellOrders) {
+fn fulfill_orders(menu_input: &str, price: i32, trades: &mut Trade) {
     match menu_input {
-        "1" => buys.add_order(price).expect("failed to add buy order"),
-        "2" => sells.add_order(price).expect("failed to add sell order"),
+        "1" => trades
+            .buy_orders
+            .add_order(price)
+            .expect("failed to add buy order"),
+        "2" => trades
+            .sell_orders
+            .add_order(price)
+            .expect("failed to add sell order"),
         _ => (),
     }
 
-    println!(" Fulfilling\n   Buys {:?}\n   Sells {:?}", buys, sells);
+    println!(" Fulfilling\n   Trades {:?}", trades);
     // Use the trait-based engine instead of the free function.
-    let mut engine = OrderBookEngine::new(buys, sells);
+    let mut engine = OrderBookEngine::new(trades);
     let trade = engine.fulfill();
     if let Some(trade) = trade {
         println!("Executed trade: {:?}", trade);
     }
-    println!(" After fulfillment\n   Buys {:?}\n   Sells {:?}", buys, sells);
+    println!(" After fulfillment\n   Trades {:?}", trades);
 }

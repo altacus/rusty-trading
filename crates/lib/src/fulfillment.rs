@@ -10,13 +10,12 @@ pub trait FulfillmentEngine {
 /// mutable references to `BuyOrders` and `SellOrders` via the
 /// `FulfillmentEngine` trait.
 pub struct OrderBookEngine<'a> {
-    pub buys: &'a mut BuyOrders,
-    pub sells: &'a mut SellOrders,
+    pub trades: &'a mut Trade,
 }
 
 impl<'a> OrderBookEngine<'a> {
-    pub fn new(buys: &'a mut BuyOrders, sells: &'a mut SellOrders) -> Self {
-        Self { buys, sells }
+    pub fn new(new_trades: &'a mut Trade) -> Self {
+        Self { trades: new_trades }
     }
 }
 
@@ -25,20 +24,28 @@ impl<'a> FulfillmentEngine for OrderBookEngine<'a> {
         let mut b_index = 0;
         let mut s_index = 0;
 
-        while b_index < self.buys.len() && s_index < self.sells.len() {
-            if self.buys.as_slice()[b_index].price < self.sells.as_slice()[s_index].price {
+        while b_index < self.trades.buy_orders.len() && s_index < self.trades.sell_orders.len() {
+            if self.trades.buy_orders.as_slice()[b_index].price
+                < self.trades.sell_orders.as_slice()[s_index].price
+            {
                 b_index = b_index + 1;
-            } else if self.buys.as_slice()[b_index].price > self.sells.as_slice()[s_index].price {
+            } else if self.trades.buy_orders.as_slice()[b_index].price
+                > self.trades.sell_orders.as_slice()[s_index].price
+            {
                 s_index = s_index + 1;
             } else {
-                if self.buys.as_slice()[b_index].order_type == OrderType::Buy
-                    && self.sells.as_slice()[s_index].order_type == OrderType::Sell
+                if self.trades.buy_orders.as_slice()[b_index].order_type == OrderType::Buy
+                    && self.trades.sell_orders.as_slice()[s_index].order_type == OrderType::Sell
                 {
                     let mut to_buy: BuyOrders = BuyOrders::new();
                     let mut to_sells: SellOrders = SellOrders::new();
 
-                    to_buy.push(self.buys.remove(b_index).unwrap()).unwrap();
-                    to_sells.push(self.sells.remove(s_index).unwrap()).unwrap();
+                    to_buy
+                        .push(self.trades.buy_orders.remove(b_index).unwrap())
+                        .unwrap();
+                    to_sells
+                        .push(self.trades.sell_orders.remove(s_index).unwrap())
+                        .unwrap();
 
                     let trade = Trade {
                         buy_orders: to_buy,
@@ -57,98 +64,110 @@ impl<'a> FulfillmentEngine for OrderBookEngine<'a> {
 /// Convenience wrapper that keeps the original API: callers who have separate
 /// `BuyOrders` and `SellOrders` can still call this function. It internally
 /// constructs an `OrderBookEngine` and invokes the trait method.
-pub fn fulfill_orders(buys: &mut BuyOrders, sells: &mut SellOrders) {
-    let mut engine = OrderBookEngine::new(buys, sells);
+pub fn fulfill_orders(trades: &mut Trade) {
+    let mut engine = OrderBookEngine::new(trades);
     engine.fulfill();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BuyOrders, Order, OrderType, SellOrders};
+    use crate::{Order, OrderType, Trade};
 
     #[test]
     fn no_trade_when_prices_differ() {
-        let mut buys = BuyOrders::new();
-        let mut sells = SellOrders::new();
+        let mut trades = Trade::new();
 
-        buys.push(Order {
-            order_type: OrderType::Buy,
-            price: 100,
-        })
-        .unwrap();
-        sells
+        trades
+            .buy_orders
+            .push(Order {
+                order_type: OrderType::Buy,
+                price: 100,
+            })
+            .unwrap();
+        trades
+            .sell_orders
             .push(Order {
                 order_type: OrderType::Sell,
                 price: 50,
             })
             .unwrap();
 
-        fulfill_orders(&mut buys, &mut sells);
+        fulfill_orders(&mut trades);
 
-        assert_eq!(buys.len(), 1);
-        assert_eq!(sells.len(), 1);
-        assert_eq!(buys.as_slice()[0].price, 100);
-        assert_eq!(sells.as_slice()[0].price, 50);
+        assert_eq!(trades.buy_orders.len(), 1);
+        assert_eq!(trades.sell_orders.len(), 1);
+        assert_eq!(trades.buy_orders.as_slice()[0].price, 100);
+        assert_eq!(trades.sell_orders.as_slice()[0].price, 50);
     }
 
     #[test]
     fn executes_trade_on_equal_price() {
-        let mut buys = BuyOrders::new();
-        let mut sells = SellOrders::new();
+        let mut trades = Trade::new();
 
-        buys.push(Order {
-            order_type: OrderType::Buy,
-            price: 50,
-        })
-        .unwrap();
-        sells
+        trades
+            .buy_orders
+            .push(Order {
+                order_type: OrderType::Buy,
+                price: 50,
+            })
+            .unwrap();
+        trades
+            .sell_orders
             .push(Order {
                 order_type: OrderType::Sell,
                 price: 50,
             })
             .unwrap();
 
-        fulfill_orders(&mut buys, &mut sells);
+        fulfill_orders(&mut trades);
 
-        assert_eq!(buys.len(), 0);
-        assert_eq!(sells.len(), 0);
+        assert_eq!(trades.buy_orders.len(), 0);
+        assert_eq!(trades.sell_orders.len(), 0);
     }
 
     #[test]
     fn removes_matching_middle_orders() {
-        let mut buys = BuyOrders::new();
-        let mut sells = SellOrders::new();
+        let mut trades = Trade::new();
 
-        buys.push(Order {
-            order_type: OrderType::Buy,
-            price: 30,
-        })
-        .unwrap();
-        buys.push(Order {
-            order_type: OrderType::Buy,
-            price: 50,
-        })
-        .unwrap();
-
-        sells
+        trades
+            .buy_orders
+            .push(Order {
+                order_type: OrderType::Buy,
+                price: 30,
+            })
+            .unwrap();
+        trades
+            .sell_orders
             .push(Order {
                 order_type: OrderType::Sell,
+                price: 30,
+            })
+            .unwrap();
+
+        trades
+            .buy_orders
+            .push(Order {
+                order_type: OrderType::Buy,
                 price: 50,
             })
             .unwrap();
-        sells
+        trades
+            .sell_orders
             .push(Order {
                 order_type: OrderType::Sell,
                 price: 60,
             })
             .unwrap();
 
-        fulfill_orders(&mut buys, &mut sells);
+        fulfill_orders(&mut trades);
+
+        let buys = &trades.buy_orders;
+        let sells = &trades.sell_orders;
 
         assert_eq!(buys.len(), 1);
         assert_eq!(sells.len(), 1);
-        assert_eq!(buys.as_slice()[0].price, 30);
+        assert_eq!(buys.as_slice()[0].price, 50);
         assert_eq!(sells.as_slice()[0].price, 60);
     }
 }
