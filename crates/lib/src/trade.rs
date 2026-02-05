@@ -1,16 +1,16 @@
-use crate::{buy_orders, sell_orders};
+use crate::{OrdersVec,  order_vec};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Trade {
-    pub buy_orders: buy_orders::BuyOrders,
-    pub sell_orders: sell_orders::SellOrders,
+    pub buy_orders:  order_vec::OrdersVec,
+    pub sell_orders: order_vec::OrdersVec,
 }
 
 impl Trade {
     pub fn new() -> Self {
         Self {
-            buy_orders: buy_orders::BuyOrders::new(),
-            sell_orders: sell_orders::SellOrders::new(),
+            buy_orders: OrdersVec::new(crate::OrderType::Buy),
+            sell_orders: OrdersVec::new(crate::OrderType::Sell),
         }
     }
 }

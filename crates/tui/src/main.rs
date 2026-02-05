@@ -3,8 +3,6 @@ use trading_lib::{FulfillmentEngine, OrderBookEngine, Trade};
 
 fn main() {
     let mut unexecuted_trades: Trade = Trade::new();
-    // let mut buys: BuyOrders = BuyOrders::new();
-    // let mut sells: SellOrders = SellOrders::new();
     let mut is_valid_menu = false;
 
     loop {

@@ -1,6 +1,3 @@
-mod buy_orders;
-pub use buy_orders::BuyOrders;
-
 mod fulfillment;
 pub use fulfillment::FulfillmentEngine;
 pub use fulfillment::OrderBookEngine;
@@ -10,8 +7,8 @@ mod order;
 pub use order::Order;
 pub use order::OrderType;
 
+mod order_vec;
+pub use order_vec::OrdersVec;
+
 mod trade;
 pub use trade::Trade;
-
-mod sell_orders;
-pub use sell_orders::SellOrders;

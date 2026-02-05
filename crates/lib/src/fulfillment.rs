@@ -1,4 +1,4 @@
-use crate::{BuyOrders, OrderType, SellOrders, Trade};
+use crate::{OrderType, OrdersVec, Trade};
 
 /// Trait that abstracts a fulfillment engine. Implementors provide the logic
 /// to match and execute trades between buy and sell orders.
@@ -6,9 +6,7 @@ pub trait FulfillmentEngine {
     fn fulfill(&mut self) -> Option<Trade>;
 }
 
-/// Adapter that allows using the existing `fulfill_orders` logic over
-/// mutable references to `BuyOrders` and `SellOrders` via the
-/// `FulfillmentEngine` trait.
+/// An order book engine that implements the `FulfillmentEngine` trait.
 pub struct OrderBookEngine<'a> {
     pub trades: &'a mut Trade,
 }
@@ -37,8 +35,8 @@ impl<'a> FulfillmentEngine for OrderBookEngine<'a> {
                 if self.trades.buy_orders.as_slice()[b_index].order_type == OrderType::Buy
                     && self.trades.sell_orders.as_slice()[s_index].order_type == OrderType::Sell
                 {
-                    let mut to_buy: BuyOrders = BuyOrders::new();
-                    let mut to_sells: SellOrders = SellOrders::new();
+                    let mut to_buy: OrdersVec = OrdersVec::new(OrderType::Buy);
+                    let mut to_sells: OrdersVec = OrdersVec::new(OrderType::Sell);
 
                     to_buy
                         .push(self.trades.buy_orders.remove(b_index).unwrap())
