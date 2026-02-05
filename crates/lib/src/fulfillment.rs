@@ -1,4 +1,4 @@
-use crate::{OrderType, Trade};
+use crate::Trade;
 
 /// Trait that abstracts a fulfillment engine. Implementors provide the logic
 /// to match and execute trades between buy and sell orders.
@@ -19,37 +19,7 @@ impl<'a> OrderBookEngine<'a> {
 
 impl<'a> FulfillmentEngine for OrderBookEngine<'a> {
     fn fulfill(&mut self) -> Option<Trade> {
-        let mut b_index = 0;
-        let mut s_index = 0;
-
-        while b_index < self.trades.buy_orders.len() && s_index < self.trades.sell_orders.len() {
-            if self.trades.buy_orders.as_slice()[b_index].price
-                < self.trades.sell_orders.as_slice()[s_index].price
-            {
-                b_index = b_index + 1;
-            } else if self.trades.buy_orders.as_slice()[b_index].price
-                > self.trades.sell_orders.as_slice()[s_index].price
-            {
-                s_index = s_index + 1;
-            } else {
-                if self.trades.buy_orders.as_slice()[b_index].order_type == OrderType::Buy
-                    && self.trades.sell_orders.as_slice()[s_index].order_type == OrderType::Sell
-                {
-                    let mut executed_trade = Trade::new();
-
-                    executed_trade.buy_orders
-                        .push(self.trades.buy_orders.remove(b_index).unwrap())
-                        .unwrap();
-                    executed_trade.sell_orders
-                        .push(self.trades.sell_orders.remove(s_index).unwrap())
-                        .unwrap();
-
-                    return Some(executed_trade);
-                }
-            }
-        }
-
-        None
+        self.trades.execute_trade()
     }
 }
 
