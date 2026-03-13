@@ -1,41 +1,91 @@
 use eframe::{egui, NativeOptions};
-use egui::{CentralPanel, Slider, Ui};
+use egui::CentralPanel;
+use lib::{FulfillmentEngine, OrderBookEngine, Trade};
 
 fn main() -> eframe::Result<()> {
     let native_options = NativeOptions::default();
     eframe::run_native(
-        "My egui App",
+        "Rusty Trading GUI",
         native_options,
-        Box::new(|cc| Ok(Box::new(MyApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(TradingApp::new(cc)))),
     )
 }
 
-#[derive(Default)]
-struct MyApp {
-    name: String,
-    age: u32,
+struct TradingApp {
+    trades: Trade,
+    price_input: String,
+    executed_trades: Vec<String>,
 }
 
-impl MyApp {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // Customize egui here if you want
-        Self::default()
+impl TradingApp {
+    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        Self {
+            trades: Trade::new(),
+            price_input: String::new(),
+            executed_trades: Vec::new(),
+        }
+    }
+
+    fn add_order(&mut self, is_buy: bool) {
+        if let Ok(price) = self.price_input.trim().parse::<i32>() {
+            let result = if is_buy {
+                self.trades.buy_orders.add_order(price)
+            } else {
+                self.trades.sell_orders.add_order(price)
+            };
+
+            if result.is_ok() {
+                self.fulfill_orders();
+                self.price_input.clear();
+            }
+        }
+    }
+
+    fn fulfill_orders(&mut self) {
+        let mut engine = OrderBookEngine::new(&mut self.trades);
+        while let Some(trade) = engine.fulfill() {
+            self.executed_trades.push(format!("Executed trade: {:?}\n", trade));
+        }
     }
 }
 
-impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+impl eframe::App for TradingApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         CentralPanel::default().show(ctx, |ui| {
-            ui.heading("My egui Application");
+            ui.heading("Rusty Trading GUI");
+
             ui.horizontal(|ui| {
-                ui.label("Your name: ");
-                ui.text_edit_singleline(&mut self.name);
+                ui.label("Price:");
+                ui.text_edit_singleline(&mut self.price_input);
             });
-            ui.add(Slider::new(&mut self.age, 0..=120).text("Age"));
-            if ui.button("Increment Age").clicked() {
-                self.age += 1;
+
+            ui.horizontal(|ui| {
+                if ui.button("Enter Buy Order").clicked() {
+                    self.add_order(true);
+                }
+                if ui.button("Enter Sell Order").clicked() {
+                    self.add_order(false);
+                }
+            });
+
+            ui.separator();
+
+            ui.label("Buy Orders:");
+            for order in self.trades.buy_orders.as_slice() {
+                ui.label(format!("Price: {}", order.price));
             }
-            ui.label(format!("Hello '{}', age {}", &self.name, self.age));
+
+            ui.label("Sell Orders:");
+            for order in self.trades.sell_orders.as_slice() {
+                ui.label(format!("Price: {}", order.price));
+            }
+
+            ui.separator();
+
+            ui.label("Executed Trades:");
+            for trade in &self.executed_trades {
+                ui.label(trade);
+            }
         });
     }
 }

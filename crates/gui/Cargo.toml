@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 eframe = "0.33.3" # Check crates.io for the latest version
 egui = "0.33.3"   # Must match eframe version
+lib = { path = "../lib" }
